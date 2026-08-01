@@ -28,3 +28,6 @@ coverage/
 
 # backup artifacts
 *.bundle
+
+# CI removed — verification runs locally via `npm run verify`.
+.github/
