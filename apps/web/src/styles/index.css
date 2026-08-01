@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body { @apply font-sans; }
+}
+
+@layer components {
+  /* Big tap targets: the register is used on a phone, standing up, in a corridor. */
+  .status-pill {
+    @apply inline-flex h-11 min-w-[3.25rem] items-center justify-center rounded-lg
+           border text-sm font-semibold transition-colors select-none;
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "edumu",
+  "private": true,
+  "version": "0.1.0",
+  "description": "EduMU \u2014 School Management System for Mauritian secondary schools",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @edumu/web",
+    "build": "npm run build -w @edumu/web",
+    "preview": "npm run preview -w @edumu/web",
+    "typecheck": "tsc -b apps/web",
+    "test": "vitest run",
+    "db:pull": "supabase db pull",
+    "db:types": "supabase gen types typescript --project-id wdwtapdmdgdcvbifbeiz > apps/web/src/types/database.ts",
+    "test:sql": "node scripts/run-sql-tests.mjs",
+    "db:reset": "supabase db reset",
+    "db:start": "supabase start",
+    "gen:parity": "node scripts/gen-parity-sql.mjs",
+    "bench:timetable": "node --experimental-strip-types scripts/bench-timetable.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "vite": "^6.4.3"
+  },
+  "type": "module"
+}

@@ -1,0 +1,62 @@
+{
+  "$comment": "Shared fixture for the attendance arithmetic. Consumed by packages/domain/src/attendance.parity.test.ts AND, via scripts/gen-parity-sql.mjs, by supabase/tests/_generated_parity.sql. Add a case here and both implementations are checked against it.",
+  "defaultThreshold": 80,
+  "cases": [
+    {
+      "name": "late and school activity count as present",
+      "statuses": ["present", "late", "school_activity", "absent_unauth"],
+      "expect": { "pctPresent": 75, "pctExclAuth": 75, "eligible": false, "shortfall": 1 }
+    },
+    {
+      "name": "authorised absence excluded from the scholarship denominator",
+      "statuses": ["present", "present", "absent_auth", "absent_unauth"],
+      "expect": { "pctPresent": 50, "pctExclAuth": 66.67, "eligible": false, "shortfall": 2 }
+    },
+    {
+      "name": "on_leave is an authorised absence",
+      "statuses": ["present", "on_leave", "on_leave", "present"],
+      "expect": { "pctPresent": 50, "pctExclAuth": 100, "eligible": false, "shortfall": 2 }
+    },
+    {
+      "name": "exactly at the threshold is eligible",
+      "statuses": [
+        "present","present","present","present","present",
+        "present","present","present","absent_unauth","absent_unauth"
+      ],
+      "expect": { "pctPresent": 80, "pctExclAuth": 80, "eligible": true, "shortfall": 0 }
+    },
+    {
+      "name": "just under the threshold is not eligible",
+      "statuses": [
+        "present","present","present","present","present",
+        "present","present","absent_unauth","absent_unauth","absent_unauth"
+      ],
+      "expect": { "pctPresent": 70, "pctExclAuth": 70, "eligible": false, "shortfall": 1 }
+    },
+    {
+      "name": "perfect attendance",
+      "statuses": ["present", "present", "present", "present"],
+      "expect": { "pctPresent": 100, "pctExclAuth": 100, "eligible": true, "shortfall": 0 }
+    },
+    {
+      "name": "never attended",
+      "statuses": ["absent_unauth", "absent_unauth", "absent_unauth", "absent_unauth"],
+      "expect": { "pctPresent": 0, "pctExclAuth": 0, "eligible": false, "shortfall": 4 }
+    },
+    {
+      "name": "wholly authorised absence leaves the scholarship view undefined",
+      "statuses": ["absent_auth", "on_leave"],
+      "expect": { "pctPresent": 0, "pctExclAuth": null, "eligible": false, "shortfall": 2 }
+    },
+    {
+      "name": "excluded pupil counts as absent for attendance purposes",
+      "statuses": ["present", "present", "excluded", "excluded"],
+      "expect": { "pctPresent": 50, "pctExclAuth": 50, "eligible": false, "shortfall": 2 }
+    },
+    {
+      "name": "no sessions yields null rather than zero",
+      "statuses": [],
+      "expect": { "pctPresent": null, "pctExclAuth": null, "eligible": false, "shortfall": 0 }
+    }
+  ]
+}
