@@ -30,10 +30,28 @@ git commit -am "Remove scratch files" ; git push
 `.env` is gitignored and untracked — only `.env.example` is committed, and it
 holds the publishable key, which is safe to publish.
 
+## 1a. Verifying your work
+
+CI has been removed — the Docker stack it needed was too heavy for what it
+bought. The same checks run locally:
+
+```powershell
+npm run verify                 # typecheck, unit tests, parity freshness
+$env:DATABASE_URL = "postgresql://postgres:...@db....supabase.co:5432/postgres"
+npm run verify -- --sql        # plus the 14 SQL suites
+```
+
+Point `DATABASE_URL` at a **branch**, not production: several suites debar a
+pupil, publish marks and amend registers.
+
+Run `npm run verify` before each commit. Nothing enforces it, which is the
+honest cost of dropping CI.
+
 ## 2. Bring the migrations into the repo
 
-**This is the important one.** All 24 migrations currently exist only inside the
-Supabase project. Until this runs, the schema has no backup.
+**This is the important one.** All 48 migrations currently exist only inside the
+Supabase project. Until this runs, the schema has no backup — and with CI gone,
+nothing else will ever replay them to prove they still work from empty.
 
 ```powershell
 npx supabase login
@@ -54,32 +72,17 @@ npm run gen:parity
 git status          # _generated_parity.sql should be unchanged
 ```
 
-## 4. First commit
+## 4. Commit and push
 
 ```powershell
+npm run verify
 git add -A
 git status          # confirm no .env and no node_modules
-git commit -m "EduMU: attendance core, RLS, eligibility screening
-
-Phase 0 and Phase 1 of the blueprint. Supabase schema with RLS on every
-table, custom access-token hook, offline-first register, lesson attendance,
-Usher's discrepancy board, exam eligibility screening against the 80% rule.
-
-Four SQL test suites plus a generated parity suite keeping the TypeScript and
-SQL attendance arithmetic in agreement."
-git push -u origin main
+git commit -m "Add migrations pulled from the linked project"
+git push
 ```
 
-## 5. Wire up CI
-
-The workflow in `.github/workflows/ci.yml` runs typecheck, unit tests, the
-parity check, and the SQL suites against a fresh local Supabase. It needs no
-secrets — `supabase start` runs a throwaway database in the runner.
-
-Check the first run: `supabase db reset` replaying all migrations from empty is
-the step that proves the schema is genuinely reproducible from the repo.
-
-## 6. Two dashboard toggles before any pilot
+## 5. Two dashboard toggles before any pilot
 
 - **Authentication → Providers → Password** → enable "Prevent use of leaked
   passwords".
@@ -89,5 +92,7 @@ the step that proves the schema is genuinely reproducible from the repo.
 
 - `a.ramdin@demo-sss.mu` holds both `form_teacher` and `usher` so a single login
   reaches every screen. The Usher is a distinct post (School Superintendent).
-- The demo school, its five pupils and the seeded Term 1 attendance are in
-  migrations 10, 15, 18 and 22. Drop them before loading real data.
+- The demo school, its pupils, timetable, marks and attendance are seeded by
+  migrations 10, 15, 18, 22, 26, 44 and 46. Drop them before loading real data.
+- A second tenant (`QB-SSS`) exists from testing multi-tenancy.
+- `r.bhugaloo@zone2.govmu` is a Zone Director fixture with no teaching duties.

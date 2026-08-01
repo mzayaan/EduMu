@@ -4,8 +4,13 @@ School management system for Mauritian secondary schools (Grades 7–13, NYCBE).
 
 Full domain analysis and technical design: **[BLUEPRINT.md](./BLUEPRINT.md)**
 
-Phase 0 + Phase 1 (attendance) are live. The database is real; the register screen
-runs against it.
+Current state and honest percentages: **[STATUS.md](./STATUS.md)** ·
+Handover commands: **[SETUP.md](./SETUP.md)**
+
+Roughly 92% of the blueprint is built — 101 tables, 201 RLS policies,
+48 migrations, 15 screens, 14 SQL suites. Against "a school could run on this
+in January", closer to 45%: everything so far has met five pupils and synthetic
+marks, not 900 pupils and 60 staff.
 
 ---
 
@@ -13,31 +18,23 @@ runs against it.
 
 | Area | Status |
 |---|---|
-| Supabase project `edumu` (ap-south-1) | provisioned |
-| Schema: school, calendar, structure, people, roles, timetable shell, attendance | applied (12 migrations) |
-| RLS on every table, forced | applied and tested (7/7 passing) |
-| Custom access-token hook packing `school_id`, roles and capabilities into the JWT | applied, enabled and verified |
-| RPCs: calendar generation, register open/close/amend, closure declaration, summary recompute | applied |
-| Seed: 2026 term dates, 15 Mauritian public holidays, demo school, 175 teaching days | applied |
-| Vite + TS + Tailwind SPA, offline outbox, sync badge | scaffolded |
-| Daily AM/PM register screen, calendar-aware | built |
-| Lesson (period) attendance — the digital attendance card | built |
-| Usher's discrepancy board, Realtime | built |
-| Attendance summaries: trigger + nightly `pg_cron` rebuild | applied |
-| Exam eligibility screening (80% rule) with recorded decisions | built |
-| Assessment: scales, marks entry, moderation, publication, term aggregation | built |
-| Documents & storage: 6 RLS-backed buckets, verification workflow | built |
-| Option-block validation (NCE core + 4 electives, SC, HSC) | built |
-| Absence notes: guardian submits, Form Teacher accepts, register rewritten | built |
-| Guardian portal: wards, attendance, results, homework, notices | built |
-| Conduct: incidents, merits, cases, escalation, append-only occurrence log | built |
-| Curriculum: syllabus, schemes of work, weekly plans, homework, coverage | schema + RLS |
-| Facilities, library, health, notices, circulars, correspondence, messaging | schema + RLS |
-| **Timetable solver** — constraint solver, worker, cover board | built |
-| Report card PDF layout | **blocked** — needs a scan of the pilot school's report book |
+| Supabase project `edumu` (ap-south-1) | 48 migrations, 101 tables, 6 views |
+| RLS on every table, forced | 201 policies · **0 tables without one** |
+| Custom access-token hook | applied, enabled, verified |
+| Attendance: registers, lessons, discrepancies, absence notes, summaries | complete |
+| Assessment: marks, moderation, publication, term results, report books | complete |
+| Report book | designed in-house — per-assessment columns incl. mocks |
+| Timetable | solver (47 ms for 24 classes), grid, daily cover |
+| Examinations | papers, seating strategies, invigilation, eligibility screening |
+| Conduct, pastoral, committees, occurrence log | built |
+| Curriculum: schemes of work, weekly plans, coverage, homework | built |
+| Facilities, library, health, notices, mail register | built |
+| Analytics, dashboards, Ministry return | built |
+| Multi-tenancy: provisioning, platform console, zone oversight | built |
+| Guardian portal | built |
+| Drag-and-drop timetable editing, committee screens, analytics charts | not built |
 | SMS delivery | **blocked** — needs a Mauritian provider and sender ID |
 | MES entry / results files | **blocked** — needs the real format spec |
-| Attendance domain maths + unit tests | written (6 passing) |
 
 ## Project
 
@@ -113,11 +110,15 @@ guardian, five students in 7A, and an open register for 13 January 2026.
 ```
 apps/web/            Vite + React + TypeScript SPA (PWA, offline-first)
   src/lib/           supabase client, offline outbox, query client, formatting
-  src/features/      attendance (register screen, hooks, api)
-  src/types/         database types
-packages/domain/     pure business logic — attendance maths, tested
-supabase/tests/      RLS behaviour tests
-BLUEPRINT.md         the full analysis and plan
+  src/features/      15 feature folders — attendance, marks, reports, timetable,
+                     exams, conduct, curriculum, admin, guardian, platform, …
+  src/workers/       timetable solver (runs off the main thread)
+packages/domain/     pure logic — attendance maths and the timetable solver
+scripts/             verify, SQL runner, parity generator, solver benchmark
+supabase/tests/      14 SQL suites — RLS and workflow behaviour
+docs/adr/            5 architecture decision records
+BLUEPRINT.md         the full domain analysis and plan
+STATUS.md            what is and is not done
 ```
 
 ## Design rules
@@ -137,14 +138,21 @@ BLUEPRINT.md         the full analysis and plan
 
 ## Testing
 
+There is deliberately **no CI**: `supabase start` pulls several GB of Docker
+images per run, which is not worth it for this project. Verification runs
+locally instead.
+
 ```bash
-npm test                        # domain logic — 6 passing
-npm run typecheck
-# RLS: run supabase/tests/*.sql against a branch
+npm run verify              # typecheck + unit tests + parity freshness
+npm run verify -- --sql     # also the SQL suites (needs DATABASE_URL)
 ```
 
-The RLS suite is the highest-value test in the project and should be a CI gate
-before any migration merges. Current coverage:
+**Run it before you commit.** Nothing enforces that — the trade for not paying
+for CI is that a regression can reach main if nobody runs it. The SQL suites
+mutate data, so point `DATABASE_URL` at a **branch**, never production
+(Supabase dashboard → Project Settings → Database → Connection string).
+
+The RLS suites are the highest-value tests in the project. Current coverage:
 
 | File | Asserts |
 |---|---|

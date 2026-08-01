@@ -16,10 +16,9 @@
     "db:pull": "supabase db pull",
     "db:types": "supabase gen types typescript --project-id wdwtapdmdgdcvbifbeiz > apps/web/src/types/database.ts",
     "test:sql": "node scripts/run-sql-tests.mjs",
-    "db:reset": "supabase db reset",
-    "db:start": "supabase start",
     "gen:parity": "node scripts/gen-parity-sql.mjs",
-    "bench:timetable": "node --experimental-strip-types scripts/bench-timetable.ts"
+    "bench:timetable": "node --experimental-strip-types scripts/bench-timetable.ts",
+    "verify": "node scripts/verify.mjs"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

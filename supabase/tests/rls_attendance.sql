@@ -47,16 +47,27 @@ begin
   insert into rls_results values ('Form Teacher of 7B reads another class register','0',n::text,n=0);
 
   -- The School Management Manual (4.5.2) is explicit that students must not have
-  -- access to attendance registers. The read is row-shaped, so a student
-  -- querying the table receives exactly their own record and cannot enumerate.
+  -- access to attendance registers. The read is row-shaped: a pupil sees their
+  -- own records and nothing else.
+  --
+  -- Assert the INVARIANT (zero rows belonging to anyone else), never a row
+  -- count. An earlier version asserted `n = 1`, which was true when the fixture
+  -- held one register and failed the moment a term of attendance was seeded —
+  -- reporting a security failure where there was none.
   perform set_config('request.jwt.claims', jsonb_build_object(
     'school_id',v_school,'person_id',v_s1,'person_type','student',
     'roles', jsonb_build_array(jsonb_build_object('c','student','s','self')),
     'caps',  jsonb_build_array())::text, true);
   set local role authenticated;
-  select count(*) into n from attendance_record;
+  select count(*) into n from attendance_record where student_id <> v_s1;
   reset role;
-  insert into rls_results values ('Student reads the class register','1 (own row only)',n::text,n=1);
+  insert into rls_results values ('Pupil sees no other pupil''s attendance','0',n::text,n=0);
+
+  -- Nor can they enumerate the registers themselves.
+  set local role authenticated;
+  select count(*) into n from attendance_session;
+  reset role;
+  insert into rls_results values ('Pupil cannot enumerate registers','0',n::text,n=0);
 
   -- A Responsible Party sees their ward and no one else's child.
   perform set_config('request.jwt.claims', jsonb_build_object(

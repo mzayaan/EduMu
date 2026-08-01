@@ -9,8 +9,14 @@ import { AbsenceNotes } from '@/features/absence/AbsenceNotes'
 import { GuardianPortal } from '@/features/guardian/GuardianPortal'
 import { DisciplineScreen } from '@/features/discipline/DisciplineScreen'
 import { TimetableScreen } from '@/features/timetable/TimetableScreen'
+import { ExamsScreen } from '@/features/exams/ExamsScreen'
+import { Dashboard } from '@/features/dashboard/Dashboard'
+import { CurriculumScreen } from '@/features/curriculum/CurriculumScreen'
+import { AdminScreen } from '@/features/admin/AdminScreen'
+import { ReportsScreen } from '@/features/reports/ReportsScreen'
+import { PlatformConsole } from '@/features/platform/PlatformConsole'
 
-type Tab = 'register' | 'lessons' | 'marks' | 'absences' | 'conduct' | 'timetable' | 'discrepancies' | 'eligibility'
+type Tab = 'platform' | 'dashboard' | 'register' | 'lessons' | 'marks' | 'absences' | 'conduct' | 'timetable' | 'exams' | 'reports' | 'curriculum' | 'admin' | 'discrepancies' | 'eligibility'
 
 /**
  * Navigation is capability-driven, not role-driven: a school can move
@@ -19,12 +25,18 @@ type Tab = 'register' | 'lessons' | 'marks' | 'absences' | 'conduct' | 'timetabl
  */
 export function Shell({ claims }: { claims: EduClaims }) {
   const tabs: { id: Tab; label: string; visible: boolean }[] = [
+    { id: 'platform',      label: 'Platform',      visible: hasCap(claims, 'platform.read.all') },
+    { id: 'dashboard',     label: 'Dashboard',     visible: hasCap(claims, 'attendance.read.all') },
     { id: 'register',      label: 'Register',      visible: hasCap(claims, 'attendance.mark') },
     { id: 'lessons',       label: 'Lessons',       visible: hasCap(claims, 'attendance.mark') },
     { id: 'marks',         label: 'Marks',         visible: hasCap(claims, 'marks.enter') },
     { id: 'absences',      label: 'Absence notes', visible: hasCap(claims, 'attendance.resolve') },
     { id: 'conduct',       label: 'Conduct',       visible: hasCap(claims, 'discipline.report') },
     { id: 'timetable',     label: 'Timetable',     visible: hasCap(claims, 'school.manage') },
+    { id: 'exams',         label: 'Exams',         visible: hasCap(claims, 'school.manage') },
+    { id: 'reports',       label: 'Report books',  visible: hasCap(claims, 'marks.enter') },
+    { id: 'curriculum',    label: 'Curriculum',    visible: hasCap(claims, 'marks.enter') },
+    { id: 'admin',         label: 'Admin',         visible: claims.person_type === 'staff' },
     { id: 'discrepancies', label: 'Discrepancies', visible: hasCap(claims, 'attendance.read.all') },
     { id: 'eligibility',   label: 'Eligibility',   visible: hasCap(claims, 'attendance.read.all') },
   ]
@@ -50,7 +62,7 @@ export function Shell({ claims }: { claims: EduClaims }) {
   return (
     <div className="min-h-dvh bg-white">
       {available.length > 1 && (
-        <nav className="flex items-center justify-between border-b border-slate-200 px-4">
+        <nav className="no-print flex items-center justify-between border-b border-slate-200 px-4">
           <div className="flex">
             {available.map((t) => (
               <button
@@ -70,12 +82,18 @@ export function Shell({ claims }: { claims: EduClaims }) {
         </nav>
       )}
 
+      {tab === 'platform' && <PlatformConsole claims={claims} />}
+      {tab === 'dashboard' && <Dashboard claims={claims} />}
       {tab === 'register' && <RegisterScreen claims={claims} />}
       {tab === 'lessons' && <PeriodAttendance claims={claims} />}
       {tab === 'marks' && <MarksGrid claims={claims} />}
       {tab === 'absences' && <AbsenceNotes />}
       {tab === 'conduct' && <DisciplineScreen claims={claims} />}
       {tab === 'timetable' && <TimetableScreen claims={claims} />}
+      {tab === 'exams' && <ExamsScreen />}
+      {tab === 'reports' && <ReportsScreen claims={claims} />}
+      {tab === 'curriculum' && <CurriculumScreen claims={claims} />}
+      {tab === 'admin' && <AdminScreen claims={claims} />}
       {tab === 'discrepancies' && <DiscrepancyBoard />}
       {tab === 'eligibility' && <EligibilityScreen />}
     </div>

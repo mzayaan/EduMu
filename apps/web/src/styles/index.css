@@ -14,3 +14,28 @@
            border text-sm font-semibold transition-colors select-none;
   }
 }
+
+/* ---------------------------------------------------------------- printing
+   Report books are printed and signed. Anything not part of the artefact is
+   removed, and each card starts a new A4 page. */
+@media print {
+  @page { size: A4; margin: 12mm; }
+
+  .no-print { display: none !important; }
+
+  body { background: #fff; }
+
+  .page-break { break-after: page; }
+  .page-break:last-child { break-after: auto; }
+
+  .report-card {
+    max-width: none;
+    padding: 0;
+    box-shadow: none;
+    border: 0;
+  }
+
+  /* Never split a subject row or a signature block across pages. */
+  .report-card tr,
+  .report-card footer { break-inside: avoid; }
+}
