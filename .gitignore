@@ -31,3 +31,4 @@ coverage/
 
 # CI removed — verification runs locally via `npm run verify`.
 .github/
+_pp.json  
