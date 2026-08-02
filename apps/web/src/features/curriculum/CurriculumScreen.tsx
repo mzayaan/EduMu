@@ -6,8 +6,9 @@ import { fetchTerms } from '@/features/marks/api'
 import { fetchMySets } from '@/features/marks/api'
 import * as api from './api'
 import type { PlanStatus, SchemeRow } from './api'
+import { SyllabusEditor } from './SyllabusEditor'
 
-type Panel = 'schemes' | 'weekly' | 'homework' | 'coverage'
+type Panel = 'syllabus' | 'schemes' | 'weekly' | 'homework' | 'coverage'
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
   draft: 'Not submitted',
@@ -34,7 +35,7 @@ export function CurriculumScreen({ claims }: { claims: EduClaims }) {
           Schemes of work, weekly plans and homework
         </p>
         <nav className="mt-3 flex gap-1 overflow-x-auto">
-          {(['schemes', 'weekly', 'homework', 'coverage'] as Panel[]).map((p) => (
+          {(['syllabus', 'schemes', 'weekly', 'homework', 'coverage'] as Panel[]).map((p) => (
             <button key={p} onClick={() => setPanel(p)}
               className={`h-9 shrink-0 rounded-lg px-3 text-sm font-medium capitalize ${
                 panel === p ? 'bg-brand text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
@@ -47,6 +48,7 @@ export function CurriculumScreen({ claims }: { claims: EduClaims }) {
       {panel === 'schemes' && <Schemes claims={claims} />}
       {panel === 'weekly' && <Weekly claims={claims} />}
       {panel === 'homework' && <Homework claims={claims} />}
+      {panel === 'syllabus' && <SyllabusEditor schoolId={claims.school_id ?? null} />}
       {panel === 'coverage' && <Coverage />}
     </div>
   )

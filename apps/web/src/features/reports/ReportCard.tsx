@@ -64,7 +64,12 @@ export interface CardData {
   attendance: {
     sessions_possible: number; sessions_present: number
     absent_authorised: number; absent_unauthorised: number
-    times_late: number; pct_present: number | null
+    absent_total?: number
+    times_late: number
+    /** Recorded at the gate. Not the same as register entries marked late:
+     *  a pupil who arrives after the morning register is absent AM, late PM. */
+    late_arrivals?: number
+    pct_present: number | null
   } | null
   conduct: {
     merits: { kind: string; reason: string; awarded_on: string }[]
@@ -243,19 +248,39 @@ export function ReportCard({ card, showRank = true }: {
           </h2>
           {a ? (
             <>
-              <div className="mt-1.5 flex items-end justify-between">
-                <Big label="Present"
-                     value={a.pct_present != null ? `${fmt(a.pct_present)}%` : '—'}
-                     tone={a.pct_present != null && a.pct_present < 80 ? 'bad' : 'normal'} />
-                <div className="text-[10px] leading-relaxed text-slate-600">
-                  <div>{a.sessions_present} of {a.sessions_possible} sessions</div>
-                  <div>{a.absent_authorised} authorised · {a.absent_unauthorised} unauthorised</div>
-                  <div>{a.times_late} late</div>
-                </div>
+              {/* Counts before the percentage. "92%" tells a parent little;
+                  "absent 7 sessions, late 4 times" is something they can act on. */}
+              <div className="mt-1.5 grid grid-cols-3 gap-2 text-center">
+                <Count label="Sessions absent"
+                       value={a.absent_total ?? (a.absent_authorised + a.absent_unauthorised)}
+                       tone={(a.absent_total ?? (a.absent_authorised + a.absent_unauthorised)) > 0
+                             ? 'bad' : 'normal'} />
+                <Count label="Times late" value={a.times_late}
+                       tone={a.times_late > 0 ? 'warn' : 'normal'} />
+                <Count label="Attended"
+                       value={a.pct_present != null ? `${fmt(a.pct_present)}%` : '—'}
+                       tone={a.pct_present != null && a.pct_present < 80 ? 'bad' : 'normal'} />
               </div>
+
+              <p className="mt-1.5 text-[9.5px] leading-relaxed text-slate-600">
+                Present for {a.sessions_present} of {a.sessions_possible} sessions.
+                {' '}Of the absences, {a.absent_authorised} authorised and{' '}
+                {a.absent_unauthorised} unauthorised.
+                {a.late_arrivals !== undefined && a.late_arrivals > 0 && (
+                  <> {a.late_arrivals} late arrival{a.late_arrivals === 1 ? '' : 's'}{' '}
+                  recorded at the gate.</>
+                )}
+              </p>
+
               {a.pct_present != null && a.pct_present < 80 && (
-                <p className="mt-1.5 text-[9px] font-semibold text-absent">
+                <p className="mt-1 text-[9px] font-semibold text-absent">
                   Below the 80% the school requires before examinations.
+                </p>
+              )}
+              {a.absent_unauthorised > 0 && (
+                <p className="mt-0.5 text-[9px] text-slate-600">
+                  Unauthorised absence should be explained by the Responsible
+                  Party. Attendance is recorded on the Leaving Certificate.
                 </p>
               )}
             </>
@@ -319,6 +344,19 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
     <div className="flex gap-2">
       <dt className="w-28 shrink-0 text-slate-500">{label}</dt>
       <dd className={strong ? 'font-semibold' : ''}>{value}</dd>
+    </div>
+  )
+}
+
+/** A single attendance figure. Counts read louder than percentages. */
+function Count({ label, value, tone = 'normal' }: {
+  label: string; value: number | string; tone?: 'normal' | 'warn' | 'bad'
+}) {
+  const colour = tone === 'bad' ? 'text-absent' : tone === 'warn' ? 'text-late' : ''
+  return (
+    <div className="border border-slate-200 py-1">
+      <p className={`text-base font-bold leading-none tabular-nums ${colour}`}>{value}</p>
+      <p className="mt-0.5 text-[8.5px] uppercase tracking-wide text-slate-500">{label}</p>
     </div>
   )
 }

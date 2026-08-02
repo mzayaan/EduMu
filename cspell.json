@@ -1,0 +1,83 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "language": "en-GB",
+
+  "//": [
+    "Dictionary for the Code Spell Checker extension.",
+    "",
+    "Kept as cspell.json at the repo root rather than in .vscode/settings.json,",
+    "because .vscode/* is gitignored — a fix nobody else gets is not a fix.",
+    "",
+    "en-GB deliberately: this is a Mauritian school system and the whole",
+    "codebase, UI copy and report book use British spelling (authorised,",
+    "programme, timetable). en-US would flag the correct spellings."
+  ],
+
+  "words": [
+    // ── the project
+    "edumu",
+
+    // ── stack
+    "supabase", "postgres", "postgrest", "gotrue", "plpgsql", "pgcrypto",
+    "pgtap", "pgcron", "jsonb", "citext", "uuids", "upsert", "upserts",
+    "supabaseanon", "anonkey", "publishable", "supabaseauth", "authenticator",
+    "tstzrange", "regclass", "relrowsecurity", "tgisinternal", "prokind",
+    "proname", "pronamespace", "typnamespace", "tgrelid", "tgfoid", "tgname",
+    "nspname", "relkind", "relnamespace", "attnum", "atttypid", "adrelid",
+    "secdef", "prosecdef", "provolatile", "searchpath",
+    "vite", "vitest", "tsconfig", "tailwindcss", "autoprefixer", "postcss",
+    "tanstack", "recharts", "idb", "keyval", "zod", "shadcn", "workbox",
+    "esbuild", "rollup", "winget", "pgdump", "psql", "dbname", "pgpass",
+    "PGPASSWORD", "nullsfirst", "onconflict", "supabasejs",
+
+    // ── Mauritian education domain
+    "Rector", "Rectors", "Usher", "Ushers", "Deputy",
+    "NYCBE", "PSAC", "HSC", "NCE", "PSEA", "PSSA", "MIE", "MES",
+    "Cambridge", "Subsidiary", "Prevocational", "Polytechnics",
+    "Mauritius", "Mauritian", "Moris", "Kreol", "Morisien",
+    "Quatre", "Bornes", "Rodrigues", "Curepipe", "Beau", "Bassin",
+    "Vacoas", "Phoenix", "Flacq", "Pamplemousses", "Savanne", "Moka",
+
+    // ── holidays and observances
+    "Thaipoosam", "Cavadee", "Shivaratree", "Maha", "Ugaadi", "Divali",
+    "Ganesh", "Chaturthi", "Eid", "Fitr", "Assumption",
+
+    // ── names used in the demo tenant
+    "Anjali", "Ramdin", "Deven", "Callychurn", "Fatima", "Joomun",
+    "Rajesh", "Bhugaloo", "Dulmeer", "Zayaan", "mzayaan",
+
+    // ── domain vocabulary that is not in a standard dictionary
+    "invigilator", "invigilators", "invigilation", "invigilating",
+    "debar", "debarred", "debarring", "debarment",
+    "absconding", "indiscipline", "pastoral", "prefects",
+    "roster", "rostering", "timetabler", "timetabling",
+    "syllabuses", "syllabi", "scheme", "schemes",
+    "guardianship", "reenrol", "reenrolment",
+    "avis", "réception",
+
+    // ── algorithm and architecture terms
+    "DSATUR", "Kempe", "greedy", "heuristic", "heuristics",
+    "multitenancy", "multitenant", "tenanted", "idempotency",
+    "backoff", "prefill", "prefilled", "prefilling",
+    "unscoped", "untermed", "unplaced", "unserviceable",
+    "definer", "invoker", "signup", "signout"
+  ],
+
+  "ignoreRegExpList": [
+    "/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/",
+    "/\\bwdwtapdmdgdcvbifbeiz\\b/",
+    "/\\bsb_publishable_[A-Za-z0-9_]+/",
+    "/\\beyJ[A-Za-z0-9._-]+/"
+  ],
+
+  "ignorePaths": [
+    "node_modules/**",
+    "dist/**",
+    "package-lock.json",
+    "supabase/migrations/00000000000000_baseline.sql",
+    "supabase/seed.sql",
+    "supabase/.temp/**",
+    "*.bundle"
+  ]
+}

@@ -5,50 +5,93 @@ software gets called "done" while nobody can use it.
 
 | Question | Answer |
 |---|---|
-| How much of the **blueprint** is built? | **~97%** |
+| How much of the **blueprint** is built? | **Complete.** Billing was scoped out by decision |
 | Could a Mauritian secondary school **run on this in January**? | **~45%** |
+
+The blueprint being finished changes less than it sounds. Everything built so
+far has met five synthetic pupils. The remaining 55% is not features.
 
 The 97% is code against a plan I wrote. The 45% is the honest one. Everything
 below closes that gap, in the order it should be done.
 
 ---
 
-## 0 · Immediate — do these before anything else
+## 0 · Immediate
 
-- [ ] **`npm install`** — `recharts` was added for the dashboard charts and is
-      not yet installed. The dashboard will not build without it.
-- [ ] **`npm run verify`** — typecheck, unit tests, parity check.
-- [ ] **`git add -A && git commit`** — the last several hours of work are on
-      disk but unversioned. Bash cannot reach `D:\Project` from the agent
-      sandbox, so this cannot be done for you.
-- [ ] **`git push`** to `github.com/mzayaan/EduMu`.
-- [ ] **Rotate the database password.** It was pasted in plaintext into a
-      terminal transcript and a chat session. Dashboard → Project Settings →
-      Database → Reset. Then use `$env:PGPASSWORD` or `.pgpass`, never a
-      pasted URI.
+- [x] **`npm install`** — was silently installing *nothing* dev. `NODE_ENV` is
+      set to `production` on this machine, which makes npm set `omit=dev`, so
+      `@types/react`, `vite`, `vitest` and `tailwindcss` were all absent and the
+      typecheck failed with a hundred phantom errors. Clean reinstall with
+      `NODE_ENV=development`: 515 packages, 0 vulnerabilities. **If a future
+      install looks impossibly small, check `NODE_ENV` first.**
+- [x] **`npm run verify`** — 3/3, 29 unit tests. Found a real solver bug on the
+      way; see below.
+- [x] Deleted `supabase/tests/probe.sql` and `.keep`.
+- [x] **Security sweep of every RPC** — found and closed a genuine data leak.
+      Migration 55, plus a regression test.
+- [x] **`scripts/dump-migrations.mjs`** — pulls applied migrations out of
+      `supabase_migrations.schema_migrations` and back into the repo. Migrations
+      48–55 existed only in the database; a restore would have lost them.
+- [x] **`RESTORE.md`** — rehearsal procedure.
+- [x] **`DATA-PROTECTION.md`** — DPA 2017 pack.
+- [ ] **Run `node scripts/dump-migrations.mjs`** with `DATABASE_URL` set. Needs
+      the database password, so it cannot be done for you. Migration 48 has been
+      written out by hand as a worked example; the script does 49–55.
+- [ ] **`git add -A && git commit && git push`** to `github.com/mzayaan/EduMu`.
 - [ ] **Enable leaked-password protection** — Authentication → Providers →
       Password. One toggle.
-- [ ] Delete `supabase/tests/probe.sql` and `supabase/tests/.keep` — scratch
-      files the agent could not unlink.
+- [ ] **Rotate the database password.** Pasted in plaintext into a terminal
+      transcript and a chat session. Declined once; it should happen before real
+      pupil data exists. Dashboard → Project Settings → Database → Reset, then
+      use `$env:PGPASSWORD`, never a pasted URI.
+
+### Two bugs found today, both silent, both by running things
+
+**Solver placed sets into no room at all.** `if (rooms.length > 0 && !room)
+continue` — when *no* room was eligible, `rooms.length` was 0, the guard was
+false, and the set fell through and was placed with `roomId: null`. A 40-pupil
+practical in a school whose only lab seats 32 was timetabled into nowhere and
+reported as fully placed. Nothing in `unplaced`. Now fails loudly, and the
+roomless case is confined to schools that have not entered rooms yet.
+
+**`report_card_attendance` leaked any child's record to any signed-in user.**
+`SECURITY DEFINER`, no authorisation of its own, unconstrained `p_student uuid`,
+reachable at `/rest/v1/rpc/report_card_attendance`. RLS does not apply inside a
+DEFINER function, so all 215 policies bought nothing on that path. Any parent —
+or any teacher at another school — could read any pupil's absence and lateness
+counts. Fixed by making it `SECURITY INVOKER` so the existing
+`attendance_summary` policy governs it: the rule was already stated correctly
+once, and the bug was bypassing it, not the rule being absent.
+
+The general lesson is worth keeping: **RLS coverage is not access control if
+`SECURITY DEFINER` functions are exposed.** `rpc_definer_authorisation.sql` now
+fails if any DEFINER RPC lacks a guard, so the next one cannot slip in quietly.
 
 ---
 
-## 1 · Code — the remaining ~3%
+## 1 · Code — ~~the remaining 3%~~ COMPLETE
 
-- [ ] **Syllabus tree editor** (Phase 6). `syllabus` / `syllabus_unit` is a
-      self-referencing tree with `term_id` per unit. Needs a nested editor and a
-      "portion to be covered this term" assignment. `syllabus_coverage` already
-      reads from it.
-- [ ] **Asset CSV import** (Phase 7). Schools have an existing register.
-      Validation preview with per-row errors, dry-run diff, idempotent on `tag`.
-- [ ] **Staff ↔ staff messaging UI** (Phase 7). `message_thread` works and is
-      tested; no screen exists for staff or guardians.
-      ⚠️ Membership must be answered by `app.in_thread()` — a subquery on
-      `thread_participant` re-enters its own policy and errors.
-- [ ] **Per-school logo upload** (Phase 9). `school.logo_path` exists and the
-      report book renders it. Wire an upload on the `{school_id}/…` path
-      pattern.
-- [ ] **Billing** (Phase 9) — only if this is commercialised. Confirm first.
+- [x] **Syllabus tree editor** — `features/curriculum/SyllabusEditor.tsx`.
+      Nested units, inline editing, per-unit term assignment. Warns when units
+      have no term, because coverage is measured against the portion planned
+      for each term and untermed units never appear in the figure.
+- [x] **Asset CSV import** — `features/admin/AssetImport.tsx`. Dry run first,
+      per-row errors, idempotent on tag. A blank room in a later file does not
+      clear a room recorded earlier.
+- [x] **Staff ↔ staff and staff ↔ guardian messaging** —
+      `features/messages/MessagesScreen.tsx`. One screen for both; RLS decides
+      what each person sees, so there is no second version to keep in step.
+- [x] **Per-school crest upload** — in the platform console. Stored at
+      `{school_id}/logo/…` so the existing path convention and its RLS policy
+      apply unchanged.
+**Billing: decided against.** Not building it. If EduMU is ever commercialised
+that decision can be revisited, but speculative payment infrastructure for a
+system that has not had a pilot would be the wrong thing to carry.
+
+All covered by `supabase/tests/syllabus_and_import.sql` (13 assertions).
+
+**The blueprint is built.** Nothing on it remains outstanding. Everything below
+this point is the work that decides whether it survives contact with a school.
 
 ---
 
@@ -91,9 +134,9 @@ The whole system has met five synthetic pupils. These need real scale.
 
 ## 4 · Operational readiness
 
-- [ ] **Restore rehearsal.** Take `00000000000000_baseline.sql` +
-      `00000000000001_storage_and_cron.sql` into an empty Supabase project and
-      confirm the app runs against it. An unrehearsed backup is a hope.
+- [ ] **Restore rehearsal.** Procedure now written up in `RESTORE.md`, with the
+      expected verification counts. Still needs actually running — the document
+      is not the rehearsal.
 - [ ] **Enable the auth hook on any new project** — Authentication → Hooks →
       `app.custom_access_token_hook`. Without it every RLS policy denies and the
       failure looks nothing like the cause.
@@ -109,17 +152,28 @@ The whole system has met five synthetic pupils. These need real scale.
 
 ## 5 · Legal and institutional
 
-- [ ] **Mauritius Data Protection Act 2017 registration.** Name the controller
-      (the school) and processor (you). Children's data is high-risk by
-      definition.
-- [ ] **Retention schedule** per record class, and a documented deletion policy.
-- [ ] **Breach procedure** with the 72-hour notification path to the Data
-      Protection Office.
-- [ ] **Consent capture review** — photography, external-agency referral. The
-      flags exist; the wording needs a human.
-- [ ] **Subject-access export** tested end to end for one pupil.
-- [ ] **Agreement with the pilot school** on ownership, hosting location and
-      what happens to the data if the arrangement ends.
+Drafted in `DATA-PROTECTION.md`. Drafting is the easy half — every item below
+still needs a human, and most need a lawyer.
+
+- [x] Controller/processor roles, lawful basis per purpose, retention schedule,
+      breach procedure, processing-agreement checklist — all drafted.
+- [ ] **Legal review.** I am not a lawyer and the document says so. The
+      retention periods especially are proposals, not law.
+- [ ] **Register with the Data Protection Office** — `dpo@govmu.org`. Two
+      registrations: the school as controller, you as processor. Fees scale with
+      employee count under the Data Protection (Fees) Regulations 2020; confirm
+      the current amount with the Office rather than any second-hand figure.
+- [ ] **Confirm retention with the school and the Ministry** before enabling any
+      automated deletion. A wrong retention rule destroys evidence a pupil may
+      later need, and cannot be undone.
+- [ ] **Test the subject-access export for one real pupil** and read it as a
+      parent would. Watch for the failure that is itself a breach: disclosing a
+      sibling, another pupil in an incident, or a staff member's private note.
+- [ ] **Consent wording** — photography, external-agency referral. Flags exist;
+      the words need a human.
+- [ ] **Processing agreement with the pilot school.** Settle data ownership and
+      what happens at the end of the arrangement *at the start*, while it is
+      still easy.
 
 ---
 
@@ -155,21 +209,32 @@ The whole system has met five synthetic pupils. These need real scale.
 
 | | |
 |---|---|
-| Tables / views | 101 / 6 · **0 without RLS** |
-| RLS policies | 201 public + 10 storage |
-| Functions | 82 · Enums 19 · Buckets 6 |
+| Tables | 102 · **0 without RLS · 0 without FORCE · 0 unpoliced** |
+| RLS policies | 215 public + 10 storage |
+| SECURITY DEFINER RPCs | 54 · **0 without a self-guard · 0 without pinned `search_path`** |
 | Tenants | 2 (multi-tenancy exercised, not theoretical) |
 | Screens | 20 files across 17 features |
-| SQL suites | 15 |
-| Schema backup | baseline 380KB + storage/cron supplement |
+| SQL suites | 17 |
+| Unit tests | 29, all passing |
+| Schema backup | baseline + storage/cron supplement + `dump-migrations.mjs` |
 
-**Phases:** 1, 2, 3, 5 complete · 0 at 98% · 4, 6, 7, 8, 9 at 85–95%.
+**Phases:** 1, 2, 3, 5 complete · 0 at 99% · 4, 6, 7, 8, 9 at 85–95%.
 
-Ten bugs found, every one by running something rather than reading it. The two
-worst were silent: a solver score of `NaN` that disabled 660,000 optimisation
-iterations while every test passed, and a pupil-clash trigger that migration 05
-claimed to create and never did — invisible for 47 migrations because only the
-solver and the UI were writing timetables.
+Twelve bugs found, every one by running something rather than reading it. The
+worst were all silent:
+
+- a solver score of `NaN` that disabled 660,000 optimisation iterations while
+  every test passed
+- a pupil-clash trigger that migration 05 claimed to create and never did —
+  invisible for 47 migrations because only the solver and the UI wrote timetables
+- a solver that placed room-constrained sets into no room at all and reported
+  full success
+- a `SECURITY DEFINER` RPC that let any signed-in user read any child's
+  attendance record, behind a schema with otherwise complete RLS
 
 Nine further failures were bad assertions rather than bad code. That pattern,
 and how to avoid it, is at the top of `NEXT.md`.
+
+The through-line: **every one of these passed a reading and failed a run.** The
+remaining 55% in the table at the top of this file is the same category of risk,
+scaled up — which is why "load one real class" outranks every feature idea.

@@ -1,6 +1,86 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, hasCap, type EduClaims } from '@/lib/supabase'
+
+/**
+ * School crest, used on the report book and every printed document.
+ *
+ * Stored in the student-photos bucket under {school_id}/logo/... so the
+ * existing path convention and its RLS policy apply unchanged — the first path
+ * segment is the tenant, which is what app.storage_school() reads.
+ */
+function LogoUpload({ schools }: { schools: SchoolRow[] }) {
+  const qc = useQueryClient()
+  const [schoolId, setSchoolId] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!schoolId && schools.length) setSchoolId(schools[0]!.school_id)
+  }, [schools, schoolId])
+
+  async function upload(file: File) {
+    if (!schoolId) return
+    setBusy(true); setError(null); setMsg(null)
+    try {
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error('The crest must be under 2 MB.')
+      }
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png'
+      const path = `${schoolId}/logo/crest.${ext}`
+
+      const { error: upErr } = await supabase.storage
+        .from('student-photos')
+        .upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) throw upErr
+
+      const { data } = supabase.storage.from('student-photos').getPublicUrl(path)
+      const { error: dbErr } = await supabase
+        .from('school').update({ logo_path: data.publicUrl }).eq('id', schoolId)
+      if (dbErr) throw dbErr
+
+      setMsg('Crest updated. It appears on report books and printed documents.')
+      void qc.invalidateQueries({ queryKey: ['platform-overview'] })
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (schools.length === 0) return null
+
+  return (
+    <div className="mt-6 rounded-xl border border-slate-200 p-4">
+      <p className="text-sm font-medium">School crest</p>
+      <p className="mt-0.5 text-xs text-slate-400">
+        Appears on the report book, the Ministry return and every printed
+        document. PNG or JPEG, square, under 2&nbsp;MB.
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <select value={schoolId} onChange={(e) => setSchoolId(e.target.value)}
+                className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm">
+          {schools.map((s) => (
+            <option key={s.school_id} value={s.school_id}>{s.name}</option>
+          ))}
+        </select>
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          disabled={busy}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f) }}
+          className="text-xs file:mr-2 file:h-10 file:rounded-lg file:border-0
+                     file:bg-brand file:px-4 file:text-sm file:font-semibold
+                     file:text-white"
+        />
+      </div>
+      {busy && <p className="mt-2 text-xs text-slate-500">Uploading…</p>}
+      {msg && <p className="mt-2 text-xs text-present">{msg}</p>}
+      {error && <p className="mt-2 text-xs text-absent">{error}</p>}
+    </div>
+  )
+}
 
 interface SchoolRow {
   school_id: string; code: string; name: string
@@ -184,6 +264,8 @@ export function PlatformConsole({ claims }: { claims: EduClaims }) {
             </tbody>
           </table>
         )}
+        {canProvision && <LogoUpload schools={schools.data ?? []} />}
+
         <p className="mt-4 text-xs text-slate-400">
           Aggregate only. No named pupil, mark or attendance record is reachable
           from this screen — RLS confines those to the school that holds them.

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { EduClaims } from '@/lib/supabase'
 import { formatDate } from '@/lib/format'
 import * as api from './api'
+import { AssetImport } from './AssetImport'
 
 type Panel = 'notices' | 'maintenance' | 'library' | 'visitors' | 'health' | 'mail' | 'assets'
 
@@ -365,9 +366,11 @@ function Assets() {
   const list = useQuery({ queryKey: ['assets'], queryFn: api.fetchAssets })
   return (
     <div className="px-4 py-4">
+      <AssetImport />
+      <h2 className="mt-6 text-sm font-semibold">Assets register</h2>
       {(list.data ?? []).length === 0 ? (
         <p className="py-10 text-center text-sm text-slate-500">
-          No assets recorded. Import the school's existing register to begin.
+          No assets recorded. Import the school's existing register above.
         </p>
       ) : (
         <table className="w-full text-sm">

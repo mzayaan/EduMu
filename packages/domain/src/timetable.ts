@@ -261,8 +261,33 @@ export function solve(input: SolverInput): SolverResult {
     })
   }
 
+  // Rooms are "managed" only if the school configured any. A school that has
+  // not entered its rooms yet should still get a timetable, with rooms left to
+  // be assigned later — that is the one case where a roomless placement is
+  // correct rather than a failure.
+  const roomsManaged = input.rooms.length > 0
+
   for (const set of ordered) {
     const rooms = roomsFor(set)
+
+    // If rooms are managed and nothing this set can use exists, it cannot be
+    // placed. This used to fall through the `!room` guard below (which only
+    // fired when rooms.length > 0) and get scheduled with roomId null, so a
+    // 40-pupil practical in a school with one 32-seat lab was timetabled into
+    // no room at all and reported as fully placed. Fail loudly instead: an
+    // unplaced set gets looked at, a roomless one does not.
+    if (roomsManaged && rooms.length === 0) {
+      unplaced.push({
+        setId: set.id,
+        name: set.name,
+        periods: set.periodsPerCycle,
+        reason: set.requiredRoomType
+          ? `no room of type ${set.requiredRoomType} large enough for ${set.size} pupils`
+          : `no room large enough for ${set.size} pupils`,
+      })
+      continue
+    }
+
     const educator = set.educatorIds[0] ?? null
     const edu = input.educators.find((e) => e.id === educator)
     let placed = 0
@@ -280,7 +305,7 @@ export function solve(input: SolverInput): SolverResult {
       if (edu?.unavailable.some(([ud, up]) => ud === d && up === p)) continue
 
       const room = rooms.find((r) => !st.roomBusy.get(r.id)?.has(key(d, p))) ?? null
-      if (rooms.length > 0 && !room) continue
+      if (roomsManaged && !room) continue
       if (!canPlace(st, set, d, p, room?.id ?? null, educator, graph)) continue
 
       apply(st, {
@@ -295,9 +320,9 @@ export function solve(input: SolverInput): SolverResult {
         setId: set.id,
         name: set.name,
         periods: set.periodsPerCycle - placed,
-        reason: rooms.length === 0
-          ? `no room of type ${set.requiredRoomType} large enough for ${set.size} pupils`
-          : 'no conflict-free slot remained',
+        // The room case is handled above, so reaching here means rooms existed
+        // but every slot was taken by a clash or an unavailability.
+        reason: 'no conflict-free slot remained',
       })
     }
   }

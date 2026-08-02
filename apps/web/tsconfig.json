@@ -11,8 +11,16 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "baseUrl": ".",
-    "paths": { "@/*": ["./src/*"], "@edumu/domain": ["../../packages/domain/src"] }
+
+    // No "baseUrl": it is deprecated and removed in TypeScript 7. Since TS 5.0
+    // "paths" resolve relative to this file's own directory, which is what we
+    // wanted from baseUrl anyway. These must stay in step with the aliases in
+    // vite.config.ts — TypeScript resolves types, Vite resolves the imports,
+    // and they fail in different ways if they disagree.
+    "paths": {
+      "@/*": ["./src/*"],
+      "@edumu/domain": ["../../packages/domain/src"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

@@ -9,6 +9,7 @@ import { AbsenceNotes } from '@/features/absence/AbsenceNotes'
 import { GuardianPortal } from '@/features/guardian/GuardianPortal'
 import { DisciplineScreen } from '@/features/discipline/DisciplineScreen'
 import { CommitteesScreen } from '@/features/committees/CommitteesScreen'
+import { MessagesScreen } from '@/features/messages/MessagesScreen'
 import { TimetableScreen } from '@/features/timetable/TimetableScreen'
 import { ExamsScreen } from '@/features/exams/ExamsScreen'
 import { Dashboard } from '@/features/dashboard/Dashboard'
@@ -19,7 +20,7 @@ import { PlatformConsole } from '@/features/platform/PlatformConsole'
 
 type Tab =
   | 'platform' | 'dashboard' | 'register' | 'lessons' | 'marks' | 'absences'
-  | 'conduct' | 'committees' | 'timetable' | 'exams' | 'reports'
+  | 'conduct' | 'committees' | 'messages' | 'timetable' | 'exams' | 'reports'
   | 'curriculum' | 'admin' | 'discrepancies' | 'eligibility'
 
 /**
@@ -37,6 +38,7 @@ export function Shell({ claims }: { claims: EduClaims }) {
     { id: 'absences',      label: 'Absence notes', visible: hasCap(claims, 'attendance.resolve') },
     { id: 'conduct',       label: 'Conduct',       visible: hasCap(claims, 'discipline.report') },
     { id: 'committees',    label: 'Committees',    visible: claims.person_type === 'staff' },
+    { id: 'messages',      label: 'Messages',      visible: claims.person_type === 'staff' },
     { id: 'timetable',     label: 'Timetable',     visible: hasCap(claims, 'school.manage') },
     { id: 'exams',         label: 'Exams',         visible: hasCap(claims, 'school.manage') },
     { id: 'reports',       label: 'Report books',  visible: hasCap(claims, 'marks.enter') },
@@ -95,6 +97,7 @@ export function Shell({ claims }: { claims: EduClaims }) {
       {tab === 'absences' && <AbsenceNotes />}
       {tab === 'conduct' && <DisciplineScreen claims={claims} />}
       {tab === 'committees' && <CommitteesScreen claims={claims} />}
+      {tab === 'messages' && <MessagesScreen claims={claims} />}
       {tab === 'timetable' && <TimetableScreen claims={claims} />}
       {tab === 'exams' && <ExamsScreen />}
       {tab === 'reports' && <ReportsScreen claims={claims} />}
