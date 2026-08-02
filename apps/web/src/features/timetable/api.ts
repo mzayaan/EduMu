@@ -86,3 +86,54 @@ export async function assignSubstitute(v: {
     .upsert(v, { onConflict: 'date,timetable_slot_id' })
   if (error) throw error
 }
+
+// ─────────────────────────────────────────────────────── manual editing
+
+export interface UnplacedLesson {
+  subject_set_id: string
+  set_name: string
+  subject_name: string
+  required: number
+  placed: number
+  outstanding: number
+  required_room_type: string | null
+  size: number
+}
+
+/** What the solver could not fit — surfaced, never silently dropped. */
+export async function fetchUnplaced(versionId: string): Promise<UnplacedLesson[]> {
+  const { data, error } = await supabase.rpc('unplaced_lessons', { p_version: versionId })
+  if (error) throw error
+  return (data ?? []) as UnplacedLesson[]
+}
+
+/**
+ * Move one lesson — a targeted update rather than rewriting the version.
+ *
+ * The three hard constraints live in the database: unique indexes for room and
+ * staff clashes, and a trigger for the pupil clash that no index can express.
+ * A bad drop is refused there, so a wrong prediction in the UI is a cosmetic
+ * bug rather than a corrupt timetable.
+ */
+export async function moveSlot(slotId: string, cycleDay: number, periodId: string) {
+  const { error } = await supabase.rpc('rpc_move_timetable_slot', {
+    p_slot: slotId, p_cycle_day: cycleDay, p_period: periodId, p_room: null,
+  })
+  if (error) throw error
+}
+
+export async function placeLesson(
+  versionId: string, setId: string, cycleDay: number, periodId: string,
+) {
+  const { error } = await supabase.rpc('rpc_place_lesson', {
+    p_version: versionId, p_set: setId,
+    p_cycle_day: cycleDay, p_period: periodId, p_room: null,
+  })
+  if (error) throw error
+}
+
+/** Returns a lesson to the unplaced tray rather than deleting the requirement. */
+export async function removeLesson(slotId: string) {
+  const { error } = await supabase.rpc('rpc_remove_lesson', { p_slot: slotId })
+  if (error) throw error
+}

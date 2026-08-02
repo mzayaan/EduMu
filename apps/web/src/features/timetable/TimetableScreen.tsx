@@ -4,8 +4,9 @@ import type { EduClaims } from '@/lib/supabase'
 import { hasCap } from '@/lib/supabase'
 import { formatDate, todayInMauritius } from '@/lib/format'
 import * as api from './api'
+import { EditableGrid } from './EditableGrid'
 
-type View = 'grid' | 'solve' | 'cover'
+type View = 'grid' | 'edit' | 'solve' | 'cover'
 
 export function TimetableScreen({ claims }: { claims: EduClaims }) {
   const [view, setView] = useState<View>('grid')
@@ -48,11 +49,11 @@ export function TimetableScreen({ claims }: { claims: EduClaims }) {
             ))}
           </select>
           <nav className="flex gap-1">
-            {(['grid', 'solve', 'cover'] as View[]).map((t) => (
+            {(['grid', 'edit', 'solve', 'cover'] as View[]).map((t) => (
               <button key={t} onClick={() => setView(t)}
                 className={`h-10 rounded-lg px-3 text-sm font-medium capitalize ${
                   view === t ? 'bg-brand text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
-                {t === 'cover' ? 'Daily cover' : t}
+                {t === 'cover' ? 'Daily cover' : t === 'edit' ? 'Edit' : t}
               </button>
             ))}
           </nav>
@@ -60,6 +61,9 @@ export function TimetableScreen({ claims }: { claims: EduClaims }) {
       </header>
 
       {versionId && view === 'grid' && <Grid versionId={versionId} />}
+      {versionId && view === 'edit' && (
+        <EditableGrid versionId={versionId} status={version?.status ?? 'draft'} />
+      )}
       {versionId && view === 'solve' && (
         <Solve versionId={versionId} claims={claims}
                cycleLength={version?.cycle_length ?? 5} status={version?.status ?? 'draft'} />

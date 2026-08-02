@@ -8,6 +8,7 @@ import { MarksGrid } from '@/features/marks/MarksGrid'
 import { AbsenceNotes } from '@/features/absence/AbsenceNotes'
 import { GuardianPortal } from '@/features/guardian/GuardianPortal'
 import { DisciplineScreen } from '@/features/discipline/DisciplineScreen'
+import { CommitteesScreen } from '@/features/committees/CommitteesScreen'
 import { TimetableScreen } from '@/features/timetable/TimetableScreen'
 import { ExamsScreen } from '@/features/exams/ExamsScreen'
 import { Dashboard } from '@/features/dashboard/Dashboard'
@@ -16,7 +17,10 @@ import { AdminScreen } from '@/features/admin/AdminScreen'
 import { ReportsScreen } from '@/features/reports/ReportsScreen'
 import { PlatformConsole } from '@/features/platform/PlatformConsole'
 
-type Tab = 'platform' | 'dashboard' | 'register' | 'lessons' | 'marks' | 'absences' | 'conduct' | 'timetable' | 'exams' | 'reports' | 'curriculum' | 'admin' | 'discrepancies' | 'eligibility'
+type Tab =
+  | 'platform' | 'dashboard' | 'register' | 'lessons' | 'marks' | 'absences'
+  | 'conduct' | 'committees' | 'timetable' | 'exams' | 'reports'
+  | 'curriculum' | 'admin' | 'discrepancies' | 'eligibility'
 
 /**
  * Navigation is capability-driven, not role-driven: a school can move
@@ -32,6 +36,7 @@ export function Shell({ claims }: { claims: EduClaims }) {
     { id: 'marks',         label: 'Marks',         visible: hasCap(claims, 'marks.enter') },
     { id: 'absences',      label: 'Absence notes', visible: hasCap(claims, 'attendance.resolve') },
     { id: 'conduct',       label: 'Conduct',       visible: hasCap(claims, 'discipline.report') },
+    { id: 'committees',    label: 'Committees',    visible: claims.person_type === 'staff' },
     { id: 'timetable',     label: 'Timetable',     visible: hasCap(claims, 'school.manage') },
     { id: 'exams',         label: 'Exams',         visible: hasCap(claims, 'school.manage') },
     { id: 'reports',       label: 'Report books',  visible: hasCap(claims, 'marks.enter') },
@@ -89,6 +94,7 @@ export function Shell({ claims }: { claims: EduClaims }) {
       {tab === 'marks' && <MarksGrid claims={claims} />}
       {tab === 'absences' && <AbsenceNotes />}
       {tab === 'conduct' && <DisciplineScreen claims={claims} />}
+      {tab === 'committees' && <CommitteesScreen claims={claims} />}
       {tab === 'timetable' && <TimetableScreen claims={claims} />}
       {tab === 'exams' && <ExamsScreen />}
       {tab === 'reports' && <ReportsScreen claims={claims} />}

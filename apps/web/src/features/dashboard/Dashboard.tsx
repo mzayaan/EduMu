@@ -1,7 +1,20 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase, type EduClaims, hasCap } from '@/lib/supabase'
 import { displayName, formatLongDate, todayInMauritius } from '@/lib/format'
+import {
+  AttendanceByClassChart, AttendanceTrendChart, PassRateChart, RollChart,
+} from './Charts'
+import { MinistryReturn } from './MinistryReturn'
+
+async function fetchAttendanceByClass() {
+  const { data, error } = await supabase
+    .from('attendance_by_class')
+    .select('class_name,grade,term_name,term_id,pupils,mean_pct,lowest_pct,below_threshold')
+    .order('class_name')
+  if (error) throw error
+  return data ?? []
+}
 
 async function fetchDashboard(date: string) {
   const { data, error } = await supabase.rpc('school_dashboard', { p_date: date })
@@ -61,6 +74,7 @@ export function Dashboard({ claims }: { claims: EduClaims }) {
   const atRisk = useQuery({ queryKey: ['at-risk'], queryFn: fetchAtRisk })
   const results = useQuery({ queryKey: ['results-by-subject'], queryFn: fetchResults })
   const roll = useQuery({ queryKey: ['roll'], queryFn: fetchRoll })
+  const byClass = useQuery({ queryKey: ['attendance-by-class'], queryFn: fetchAttendanceByClass })
   const ministry = useQuery({
     queryKey: ['ministry-return', claims.year_id],
     queryFn: () => fetchMinistryReturn(claims.year_id!),
@@ -69,6 +83,20 @@ export function Dashboard({ claims }: { claims: EduClaims }) {
 
   const d = dash.data ?? {}
   const attention = ATTENTION.filter((a) => Number(d[a.key] ?? 0) > 0)
+
+  // attendance_by_class is per class per term; the trend needs one point per
+  // term, so collapse it here rather than adding another view.
+  const termMeans = useMemo(() => {
+    const acc = new Map<string, { sum: number; n: number }>()
+    for (const r of (byClass.data ?? []) as any[]) {
+      if (r.mean_pct === null) continue
+      const cur = acc.get(r.term_name) ?? { sum: 0, n: 0 }
+      acc.set(r.term_name, { sum: cur.sum + Number(r.mean_pct), n: cur.n + 1 })
+    }
+    return [...acc.entries()]
+      .map(([term_name, v]) => ({ term_name, mean_pct: v.sum / v.n }))
+      .sort((a, b) => a.term_name.localeCompare(b.term_name))
+  }, [byClass.data])
 
   return (
     <div className="mx-auto w-full max-w-4xl pb-32">
@@ -101,6 +129,42 @@ export function Dashboard({ claims }: { claims: EduClaims }) {
               </li>
             ))}
           </ul>
+        )}
+
+        {/* Charts first: the shape of a term is read faster than its rows.
+            The tables stay underneath — a Rector transcribing a figure onto a
+            Ministry form needs the number, not the picture. */}
+        {(byClass.data ?? []).length > 0 && (
+          <section className="mt-6">
+            <h2 className="text-sm font-semibold">Attendance by class</h2>
+            <p className="text-xs text-slate-400">
+              Against the 80% the school requires before examinations.
+            </p>
+            <AttendanceByClassChart rows={byClass.data as any} />
+          </section>
+        )}
+
+        {(byClass.data ?? []).length > 0 && (
+          <section className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div>
+              <h2 className="text-sm font-semibold">Attendance across the year</h2>
+              <AttendanceTrendChart rows={termMeans} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">Roll by grade</h2>
+              <RollChart rows={(roll.data ?? []) as any} />
+            </div>
+          </section>
+        )}
+
+        {(results.data ?? []).length > 0 && (
+          <section className="mt-6">
+            <h2 className="text-sm font-semibold">Pass rate by subject</h2>
+            <p className="text-xs text-slate-400">
+              Weakest first — this is opened to find the subject in trouble.
+            </p>
+            <PassRateChart rows={results.data as any} />
+          </section>
         )}
 
         {(roll.data ?? []).length > 0 && (
@@ -185,23 +249,43 @@ export function Dashboard({ claims }: { claims: EduClaims }) {
         )}
 
         {hasCap(claims, 'school.manage') && (
-          <div className="mt-8">
+          <div className="no-print mt-8">
             <button onClick={() => setShowReturn((v) => !v)}
                     className="h-10 rounded-lg border border-slate-300 px-4 text-sm font-semibold">
               {showReturn ? 'Hide' : 'Generate'} Ministry statistical return
             </button>
-            {showReturn && ministry.data && (
-              <>
-                <p className="mt-2 text-xs text-slate-400">
-                  Roll by grade, teaching days per term, attendance, staff by post
-                  and results — as one document. Copy or export as required.
-                </p>
-                <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-slate-900 p-3
-                                text-xs text-slate-100">
-                  {JSON.stringify(ministry.data, null, 2)}
-                </pre>
-              </>
-            )}
+            <p className="mt-2 text-xs text-slate-400">
+              Roll by grade, teaching days, attendance, staff by post and results —
+              the figures schools are asked for repeatedly, as one signed sheet.
+            </p>
+          </div>
+        )}
+
+        {showReturn && ministry.data && (
+          <div className="mt-4">
+            <div className="no-print mb-2 flex gap-2">
+              <button onClick={() => window.print()}
+                      className="h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-white">
+                Print
+              </button>
+              <button
+                onClick={() => {
+                  const blob = new Blob([JSON.stringify(ministry.data, null, 2)],
+                                        { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = `ministry-return-${date}.json`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }}
+                className="h-10 rounded-lg border border-slate-300 px-4 text-sm font-semibold">
+                Download JSON
+              </button>
+            </div>
+            <div className="rounded-xl border border-slate-200 shadow-sm">
+              <MinistryReturn data={ministry.data as any} />
+            </div>
           </div>
         )}
       </div>
