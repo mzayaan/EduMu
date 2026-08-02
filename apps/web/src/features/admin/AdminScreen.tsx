@@ -4,15 +4,18 @@ import type { EduClaims } from '@/lib/supabase'
 import { formatDate } from '@/lib/format'
 import * as api from './api'
 import { AssetImport } from './AssetImport'
+import { SchoolTools } from './SchoolTools'
 
-type Panel = 'notices' | 'maintenance' | 'library' | 'visitors' | 'health' | 'mail' | 'assets'
+type Panel =
+  | 'notices' | 'maintenance' | 'library' | 'visitors' | 'health' | 'mail'
+  | 'assets' | 'tools'
 
 export function AdminScreen({ claims }: { claims: EduClaims }) {
   const [panel, setPanel] = useState<Panel>('notices')
   const tabs: [Panel, string][] = [
     ['notices', 'Notices'], ['maintenance', 'Maintenance'], ['library', 'Library'],
     ['visitors', 'Visitors'], ['health', 'Health'], ['mail', 'Mail register'],
-    ['assets', 'Assets'],
+    ['assets', 'Assets'], ['tools', 'Certificates & tools'],
   ]
   return (
     <div className="mx-auto w-full max-w-4xl pb-32">
@@ -39,6 +42,7 @@ export function AdminScreen({ claims }: { claims: EduClaims }) {
       {panel === 'health' && <Health />}
       {panel === 'mail' && <Mail claims={claims} />}
       {panel === 'assets' && <Assets />}
+      {panel === 'tools' && <SchoolTools />}
     </div>
   )
 }

@@ -5,16 +5,19 @@ software gets called "done" while nobody can use it.
 
 | Question | Answer |
 |---|---|
-| How much of the **blueprint** is built? | **Not complete** — see `BLUEPRINT-AUDIT.md` |
-| Could a Mauritian secondary school **run on this in January**? | **~45%** |
+| How much of the **blueprint** is built? | Everything except **school fees**, which is an open decision |
+| Could a Mauritian secondary school **run on this in January**? | **~55%** |
 
-> **Correction, 2 Aug.** This table previously said the blueprint was complete.
-> A mechanical audit (`node scripts/audit-blueprint.mjs`) shows it is not. Four
-> specified subsystems were never built — the **promotion rules engine (§15.4)**
-> and **academic year rollover** among them, which together mean the system
-> cannot cross into a second academic year. Seven RPCs exist with no UI calling
-> them, including `rpc_record_late_arrival`, so the late-arrival feature has no
-> way to be used. Full findings in `BLUEPRINT-AUDIT.md`.
+> **History, 2 Aug.** This table once claimed the blueprint was complete. An
+> audit (`npm run audit:blueprint`) showed it was not: four specified
+> subsystems were missing and seven working RPCs had no caller. Three of the
+> four are now built — **promotion rules engine (§15.4)**, **year rollover**,
+> **staff attendance / movement / room booking** — and **every RPC now has a
+> caller**. Fees remain an open decision rather than a gap. Detail in
+> `BLUEPRINT-AUDIT.md`.
+>
+> The claim was wrong because nobody had checked it mechanically. That is now a
+> script, so it cannot drift silently again.
 
 The blueprint being finished changes less than it sounds. Everything built so
 far has met five synthetic pupils. The remaining 55% is not features.
@@ -106,23 +109,26 @@ system that has not had a pilot would be the wrong thing to carry.
 
 All covered by `supabase/tests/syllabus_and_import.sql` (13 assertions).
 
-**The blueprint is NOT fully built** — that claim did not survive an audit.
-`BLUEPRINT-AUDIT.md` has the detail; the load-bearing items are:
+Audited mechanically (`npm run audit:blueprint`). `BLUEPRINT-AUDIT.md` has the
+detail.
 
-- [ ] **Promotion rules engine (§15.4)** — fully specified, entirely absent. No
-      rule table, no domain function, no repeat counter. The Manual's
-      second-attempt rule and both Sixth Form entry rules cannot be evaluated.
-- [ ] **Academic year rollover** — absent. Nothing carries pupils into next
-      year's classes. Depends on the promotion engine. **This is the one with a
-      date on it.**
-- [ ] **Wire up the seven uncalled RPCs**, starting with
-      `rpc_record_late_arrival` (no Usher screen, so the feature cannot fire)
-      and `rpc_set_subject_comment` (report books print blank subject comments).
-- [ ] **Decide on school fees** — `bursar` is a role with no fee tables. Build,
-      or record that fees stay in the school's existing system.
-- [ ] Staff attendance, staff movement, room booking — specified, absent, not
-      urgent.
-- [ ] Reconcile the blueprint text, or label §13/§16 as historical.
+- [x] **Promotion rules engine (§15.4)** — migrations 56–57. Rules as data per
+      year, all eight condition kinds, Rector override with a mandatory reason,
+      facts frozen with each decision. Mirrored in `packages/domain` and
+      checked for parity: 16/16 cases agree across Postgres and TypeScript.
+- [x] **Academic year rollover** — migration 57. Dry run by default; refuses
+      while any decision is unconfirmed; names anyone it cannot place.
+      **The system can now cross a year boundary, which it could not before.**
+- [x] **Staff attendance, staff movement, room booking** — migration 58.
+- [x] **Every RPC now has a caller.** Was seven stranded, now zero. New Gate,
+      Year end and Rooms screens, plus subject comments under Marks and
+      certificates under Admin.
+- [ ] **Decide on school fees.** Not a gap — a decision nobody has made.
+      `bursar` is still a role with capabilities and nothing to do. Options in
+      `BLUEPRINT-AUDIT.md` §3.1. Distinct from the SaaS billing that was scoped
+      out, which should stay out.
+- [ ] Reconcile the blueprint text, or mark Parts C and D as the original
+      design and point at the schema as the source of truth.
 
 Everything below this point is the work that decides whether it survives
 contact with a school.
@@ -243,13 +249,15 @@ still needs a human, and most need a lawyer.
 
 | | |
 |---|---|
-| Tables | 102 · **0 without RLS · 0 without FORCE · 0 unpoliced** |
-| RLS policies | 215 public + 10 storage |
-| SECURITY DEFINER RPCs | 54 · **0 without a self-guard · 0 without pinned `search_path`** |
+| Tables | 107 · **0 without RLS · 0 without FORCE · 0 unpoliced** |
+| RLS policies | 227 |
+| SECURITY DEFINER RPCs | **0 without a self-guard · 0 without pinned `search_path`** |
+| RPCs with no UI caller | **0** (was 7) |
 | Tenants | 2 (multi-tenancy exercised, not theoretical) |
-| Screens | 20 files across 17 features |
-| SQL suites | 17 |
-| Unit tests | 29, all passing |
+| Screens | 33 components across 20 features |
+| SQL suites | 20 |
+| Unit tests | 69, all passing |
+| Cross-implementation parity | attendance 10/10 · promotion 16/16 |
 | Schema backup | baseline + storage/cron supplement + `dump-migrations.mjs` |
 
 **Phases:** 1, 2, 3, 5 complete · 0 at 99% · 4, 6, 7, 8, 9 at 85–95%.

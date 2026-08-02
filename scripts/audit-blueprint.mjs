@@ -57,11 +57,16 @@ const columns = split(DB.columns)
 const enumLabels = split(DB.enumLabels)
 const roleCodes = split(DB.roleCodes)
 const capabilityCodes = split(DB.capabilityCodes)
+// Promotion condition kinds live as JSON string values inside
+// promotion_rule.conditions, so no catalogue query can see them. They are real
+// and implemented; without this the audit reports the whole rules engine as
+// missing every time.
+const conditionKinds = split(DB.conditionKinds)
 
 // Anything that legitimately exists somewhere in the system, under any guise.
 const everything = new Set([
   ...tables, ...functions, ...views, ...enums, ...buckets,
-  ...columns, ...enumLabels, ...roleCodes, ...capabilityCodes,
+  ...columns, ...enumLabels, ...roleCodes, ...capabilityCodes, ...conditionKinds,
 ])
 
 // ── source tree ───────────────────────────────────────────────────────────

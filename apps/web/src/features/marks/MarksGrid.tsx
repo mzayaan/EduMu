@@ -6,6 +6,7 @@ import {
   computeTermResults, fetchMarksheet, fetchMySets, fetchTerms,
   setAssessmentStatus, type AssessmentStatus, type MarksheetRow,
 } from './api'
+import { MarkCorrections } from './MarkCorrections'
 
 const CODES = ['ABS', 'EXEMPT', 'MED', 'DEBARRED'] as const
 
@@ -218,6 +219,13 @@ export function MarksGrid({ claims }: { claims: EduClaims }) {
           </table>
         </div>
       )}
+
+      {/*
+        Subject comments live below the grid rather than inside it: they are
+        written once per pupil per term, not per assessment, and the report book
+        prints them blank if nobody ever does.
+      */}
+      {setId && termId && <MarkCorrections termId={termId} setId={setId} />}
     </div>
   )
 }

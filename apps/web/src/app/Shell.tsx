@@ -17,11 +17,15 @@ import { CurriculumScreen } from '@/features/curriculum/CurriculumScreen'
 import { AdminScreen } from '@/features/admin/AdminScreen'
 import { ReportsScreen } from '@/features/reports/ReportsScreen'
 import { PlatformConsole } from '@/features/platform/PlatformConsole'
+import { GateScreen } from '@/features/gate/GateScreen'
+import { YearEndScreen } from '@/features/yearend/YearEndScreen'
+import { RoomBookings } from '@/features/rooms/RoomBookings'
 
 type Tab =
   | 'platform' | 'dashboard' | 'register' | 'lessons' | 'marks' | 'absences'
   | 'conduct' | 'committees' | 'messages' | 'timetable' | 'exams' | 'reports'
   | 'curriculum' | 'admin' | 'discrepancies' | 'eligibility'
+  | 'gate' | 'rooms' | 'yearend'
 
 /**
  * Navigation is capability-driven, not role-driven: a school can move
@@ -46,6 +50,13 @@ export function Shell({ claims }: { claims: EduClaims }) {
     { id: 'admin',         label: 'Admin',         visible: claims.person_type === 'staff' },
     { id: 'discrepancies', label: 'Discrepancies', visible: hasCap(claims, 'attendance.read.all') },
     { id: 'eligibility',   label: 'Eligibility',   visible: hasCap(claims, 'attendance.read.all') },
+    // The Usher's desk: late arrivals and staff off site. Two separate
+    // capabilities because a school may split those duties between posts.
+    { id: 'gate',          label: 'Gate',          visible: hasCap(claims, 'attendance.resolve')
+                                                          || hasCap(claims, 'staff.manage') },
+    { id: 'rooms',         label: 'Rooms',         visible: claims.person_type === 'staff' },
+    { id: 'yearend',       label: 'Year end',      visible: hasCap(claims, 'school.manage')
+                                                          || hasCap(claims, 'marks.publish') },
   ]
   const available = tabs.filter((t) => t.visible)
   const [tab, setTab] = useState<Tab>(available[0]?.id ?? 'register')
@@ -105,6 +116,9 @@ export function Shell({ claims }: { claims: EduClaims }) {
       {tab === 'admin' && <AdminScreen claims={claims} />}
       {tab === 'discrepancies' && <DiscrepancyBoard />}
       {tab === 'eligibility' && <EligibilityScreen />}
+      {tab === 'gate' && <GateScreen claims={claims} />}
+      {tab === 'rooms' && <RoomBookings claims={claims} />}
+      {tab === 'yearend' && <YearEndScreen claims={claims} />}
     </div>
   )
 }

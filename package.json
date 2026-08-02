@@ -17,6 +17,9 @@
     "db:types": "supabase gen types typescript --project-id wdwtapdmdgdcvbifbeiz > apps/web/src/types/database.ts",
     "test:sql": "node scripts/run-sql-tests.mjs",
     "gen:parity": "node scripts/gen-parity-sql.mjs",
+    "gen:promotion-parity": "node scripts/gen-promotion-parity.mjs",
+    "audit:blueprint": "node scripts/audit-blueprint.mjs",
+    "db:migrations": "node scripts/dump-migrations.mjs",
     "bench:timetable": "node --experimental-strip-types scripts/bench-timetable.ts",
     "verify": "node scripts/verify.mjs"
   },
