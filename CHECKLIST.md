@@ -5,8 +5,16 @@ software gets called "done" while nobody can use it.
 
 | Question | Answer |
 |---|---|
-| How much of the **blueprint** is built? | **Complete.** Billing was scoped out by decision |
+| How much of the **blueprint** is built? | **Not complete** — see `BLUEPRINT-AUDIT.md` |
 | Could a Mauritian secondary school **run on this in January**? | **~45%** |
+
+> **Correction, 2 Aug.** This table previously said the blueprint was complete.
+> A mechanical audit (`node scripts/audit-blueprint.mjs`) shows it is not. Four
+> specified subsystems were never built — the **promotion rules engine (§15.4)**
+> and **academic year rollover** among them, which together mean the system
+> cannot cross into a second academic year. Seven RPCs exist with no UI calling
+> them, including `rpc_record_late_arrival`, so the late-arrival feature has no
+> way to be used. Full findings in `BLUEPRINT-AUDIT.md`.
 
 The blueprint being finished changes less than it sounds. Everything built so
 far has met five synthetic pupils. The remaining 55% is not features.
@@ -98,8 +106,26 @@ system that has not had a pilot would be the wrong thing to carry.
 
 All covered by `supabase/tests/syllabus_and_import.sql` (13 assertions).
 
-**The blueprint is built.** Nothing on it remains outstanding. Everything below
-this point is the work that decides whether it survives contact with a school.
+**The blueprint is NOT fully built** — that claim did not survive an audit.
+`BLUEPRINT-AUDIT.md` has the detail; the load-bearing items are:
+
+- [ ] **Promotion rules engine (§15.4)** — fully specified, entirely absent. No
+      rule table, no domain function, no repeat counter. The Manual's
+      second-attempt rule and both Sixth Form entry rules cannot be evaluated.
+- [ ] **Academic year rollover** — absent. Nothing carries pupils into next
+      year's classes. Depends on the promotion engine. **This is the one with a
+      date on it.**
+- [ ] **Wire up the seven uncalled RPCs**, starting with
+      `rpc_record_late_arrival` (no Usher screen, so the feature cannot fire)
+      and `rpc_set_subject_comment` (report books print blank subject comments).
+- [ ] **Decide on school fees** — `bursar` is a role with no fee tables. Build,
+      or record that fees stay in the school's existing system.
+- [ ] Staff attendance, staff movement, room booking — specified, absent, not
+      urgent.
+- [ ] Reconcile the blueprint text, or label §13/§16 as historical.
+
+Everything below this point is the work that decides whether it survives
+contact with a school.
 
 ---
 
