@@ -34,9 +34,17 @@ below closes that gap, in the order it should be done.
       48–55 existed only in the database; a restore would have lost them.
 - [x] **`RESTORE.md`** — rehearsal procedure.
 - [x] **`DATA-PROTECTION.md`** — DPA 2017 pack.
-- [ ] **Run `node scripts/dump-migrations.mjs`** with `DATABASE_URL` set. Needs
-      the database password, so it cannot be done for you. Migration 48 has been
-      written out by hand as a worked example; the script does 49–55.
+- [x] **Migrations 48–55 recovered into the repo.** They existed only in the
+      database; the baseline dump predates them, so a restore would have lost
+      the form-teacher, lateness and security work without any error. Pulled
+      from `supabase_migrations.schema_migrations` and verified byte-for-byte
+      against the database — the only intentional difference is a forward
+      reference in 53 to the fix in 55.
+- [ ] **Refresh the baseline dump** — `pg_dump --schema=public --schema=app`.
+      Genuinely needs the password. Lower priority now that the migration files
+      exist: baseline + 48–55 is a complete restore path, so this is tidiness
+      rather than exposure. `scripts/dump-migrations.mjs` keeps it current from
+      here — run it after any migration applied outside the repo.
 - [ ] **`git add -A && git commit && git push`** to `github.com/mzayaan/EduMu`.
 - [ ] **Enable leaked-password protection** — Authentication → Providers →
       Password. One toggle.
