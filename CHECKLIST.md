@@ -57,8 +57,24 @@ below closes that gap, in the order it should be done.
       rather than exposure. `scripts/dump-migrations.mjs` keeps it current from
       here — run it after any migration applied outside the repo.
 - [ ] **`git add -A && git commit && git push`** to `github.com/mzayaan/EduMu`.
-- [ ] **Enable leaked-password protection** — Authentication → Providers →
-      Password. One toggle.
+- [x] **Leaked-password protection — built, not toggled.** Supabase ships this
+      as an Auth setting, but it is **Pro plan and above** and this org is on
+      Free, so the switch does not exist. The service behind it (HaveIBeenPwned's
+      Pwned Passwords range API) is free and needs no key, so it is implemented
+      in `apps/web/src/lib/pwned.ts` instead.
+      **k-anonymity:** the password is SHA-1'd locally and only the first five
+      hex characters of the hash are sent; HIBP returns ~500–1,000 suffixes and
+      the comparison happens on device. HIBP never sees the password, the full
+      hash, the email, or which suffix matched. `Add-Padding` is requested so
+      the response size leaks nothing either.
+      **Three-state result:** breached / clean / **unavailable**. An HIBP outage
+      must not be reported as "safe", and must not lock a school out of its own
+      system — unavailable downgrades to advice. Applied on password *change*,
+      never on sign-in, where a breach warning would announce the fact to anyone
+      looking at the screen. 14 tests.
+      If the project ever moves to Pro, delete this and use the built-in — it
+      runs at the Auth layer and also covers API-driven password changes, which
+      a client-side check cannot. Do not run both.
 - [ ] **Rotate the database password.** Pasted in plaintext into a terminal
       transcript and a chat session. Declined once; it should happen before real
       pupil data exists. Dashboard → Project Settings → Database → Reset, then

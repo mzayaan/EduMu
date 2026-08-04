@@ -22,6 +22,7 @@ import { YearEndScreen } from '@/features/yearend/YearEndScreen'
 import { RoomBookings } from '@/features/rooms/RoomBookings'
 import { FeesScreen } from '@/features/fees/FeesScreen'
 import { OutboxScreen } from '@/features/notify/OutboxScreen'
+import { ChangePassword } from './ChangePassword'
 
 type Tab =
   | 'platform' | 'dashboard' | 'register' | 'lessons' | 'marks' | 'absences'
@@ -130,12 +131,31 @@ export function Shell({ claims }: { claims: EduClaims }) {
 }
 
 function SignOut() {
+  const [changing, setChanging] = useState(false)
   return (
+    <span className="flex items-center gap-3">
+      <button
+        onClick={() => setChanging(true)}
+        className="text-xs font-medium text-slate-400 hover:text-slate-600"
+      >
+        Change password
+      </button>
+      {changing && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
+             onClick={() => setChanging(false)}>
+          <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-xl"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Change your password</h2>
+            <ChangePassword onDone={() => setTimeout(() => setChanging(false), 1500)} />
+          </div>
+        </div>
+      )}
     <button
       onClick={() => supabase.auth.signOut()}
       className="text-xs font-medium text-slate-400 hover:text-slate-600"
     >
       Sign out
     </button>
+    </span>
   )
 }
