@@ -123,10 +123,23 @@ detail.
 - [x] **Every RPC now has a caller.** Was seven stranded, now zero. New Gate,
       Year end and Rooms screens, plus subject comments under Marks and
       certificates under Admin.
-- [ ] **Decide on school fees.** Not a gap — a decision nobody has made.
-      `bursar` is still a role with capabilities and nothing to do. Options in
-      `BLUEPRINT-AUDIT.md` §3.1. Distinct from the SaaS billing that was scoped
-      out, which should stay out.
+- [x] **School fees — DEMONSTRATION ONLY** (migrations 59–60). Guardian pays by
+      MCB Juice out-of-band, uploads the confirmation screenshot, the office
+      checks its bank and verifies. **No card data, no gateway, no money moves
+      through this system.** A pending claim never reduces a balance, and a
+      guardian cannot verify their own payment — that control lives in RLS, not
+      the UI. Before real use it needs bank reconciliation, refunds, an
+      immutable ledger and an accountant.
+- [x] **SMS dispatcher** (migration 61 + `apps/web/src/lib/sms.ts`). The queue
+      had been filling since phase 3 and nothing ever drained it. Provider
+      adapters: `console` (default, free forever, delivers nothing),
+      Africa's Talking sandbox, and textbee (own Android handset). Every
+      adapter declares whether it reaches a real phone, and the screen says so
+      — see `SMS.md`.
+- [x] **MES researched — no public format exists.** Entries go through an
+      Oracle APEX portal; no schema is published. We export our own documented
+      shape as a keying worksheet rather than inventing a format and calling it
+      theirs. See `MES.md`.
 - [ ] Reconcile the blueprint text, or mark Parts C and D as the original
       design and point at the schema as the source of truth.
 
@@ -135,19 +148,31 @@ contact with a school.
 
 ---
 
-## 2 · Blocked on external inputs
+## 2 · ~~Blocked on external inputs~~ — researched and resolved
 
-Neither can be guessed at. Guessing produces something that looks finished and
-is wrong.
+Both were carried as "blocked" for weeks. Researching them changed what was
+worth building.
 
-- [ ] **SMS delivery.** Needs a Mauritian gateway account, a registered sender
-      ID, and per-message cost. The `notification` queue already fills correctly
-      on unauthorised absence, discipline escalation and report publication —
-      only the dispatcher is missing. SMS matters more than the portal: guardian
-      app adoption will never reach 100%, and SMS is what actually gets read.
-- [ ] **MES entry and results file formats.** Needs the current specification
-      and a sample file. Isolate behind an adapter with fixture-based tests so
-      the format never leaks into the schema.
+- [x] **SMS delivery.** There is **no permanent free tier** for real SMS —
+      Twilio's trial prefixes every message and reaches five verified numbers,
+      Vonage gives about €2. So the provider is an interface and `console` is
+      the default: a portfolio runs free forever, a pilot swaps one environment
+      variable to Africa's Talking's sandbox or textbee. Segment counting,
+      Mauritian number normalisation and one-at-a-time personalised sends are
+      all handled. Details and the pre-launch list in `SMS.md`.
+- [x] **MES formats — there are none to implement.** Entries are keyed into an
+      Oracle APEX portal and no bulk schema is published. Building
+      "the MES format" would have meant inventing one under a name people would
+      believe, and discovering it was wrong in November of an examination year.
+      We export our own documented shape as a worksheet. `MES.md` records what
+      a real integration would need, the largest piece being a Cambridge
+      syllabus-code map versioned by examination year.
+
+Still genuinely external:
+
+- [ ] A provider account and a registered Mauritian sender ID, when there is a
+      pilot to send for.
+- [ ] The MES specification, from the Records Unit.
 
 ---
 
@@ -249,12 +274,12 @@ still needs a human, and most need a lawyer.
 
 | | |
 |---|---|
-| Tables | 107 · **0 without RLS · 0 without FORCE · 0 unpoliced** |
-| RLS policies | 227 |
+| Tables | 110 · **0 without RLS · 0 without FORCE · 0 unpoliced** |
+| RLS policies | 236 · storage buckets 7 |
 | SECURITY DEFINER RPCs | **0 without a self-guard · 0 without pinned `search_path`** |
 | RPCs with no UI caller | **0** (was 7) |
 | Tenants | 2 (multi-tenancy exercised, not theoretical) |
-| Screens | 33 components across 20 features |
+| Screens | 35 components across 22 features |
 | SQL suites | 20 |
 | Unit tests | 69, all passing |
 | Cross-implementation parity | attendance 10/10 · promotion 16/16 |

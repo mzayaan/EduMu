@@ -20,12 +20,14 @@ import { PlatformConsole } from '@/features/platform/PlatformConsole'
 import { GateScreen } from '@/features/gate/GateScreen'
 import { YearEndScreen } from '@/features/yearend/YearEndScreen'
 import { RoomBookings } from '@/features/rooms/RoomBookings'
+import { FeesScreen } from '@/features/fees/FeesScreen'
+import { OutboxScreen } from '@/features/notify/OutboxScreen'
 
 type Tab =
   | 'platform' | 'dashboard' | 'register' | 'lessons' | 'marks' | 'absences'
   | 'conduct' | 'committees' | 'messages' | 'timetable' | 'exams' | 'reports'
   | 'curriculum' | 'admin' | 'discrepancies' | 'eligibility'
-  | 'gate' | 'rooms' | 'yearend'
+  | 'gate' | 'rooms' | 'yearend' | 'fees' | 'outbox'
 
 /**
  * Navigation is capability-driven, not role-driven: a school can move
@@ -57,6 +59,8 @@ export function Shell({ claims }: { claims: EduClaims }) {
     { id: 'rooms',         label: 'Rooms',         visible: claims.person_type === 'staff' },
     { id: 'yearend',       label: 'Year end',      visible: hasCap(claims, 'school.manage')
                                                           || hasCap(claims, 'marks.publish') },
+    { id: 'fees',          label: 'Fees',          visible: hasCap(claims, 'school.manage') },
+    { id: 'outbox',        label: 'SMS outbox',    visible: hasCap(claims, 'person.read.all') },
   ]
   const available = tabs.filter((t) => t.visible)
   const [tab, setTab] = useState<Tab>(available[0]?.id ?? 'register')
@@ -119,6 +123,8 @@ export function Shell({ claims }: { claims: EduClaims }) {
       {tab === 'gate' && <GateScreen claims={claims} />}
       {tab === 'rooms' && <RoomBookings claims={claims} />}
       {tab === 'yearend' && <YearEndScreen claims={claims} />}
+      {tab === 'fees' && <FeesScreen claims={claims} />}
+      {tab === 'outbox' && <OutboxScreen claims={claims} />}
     </div>
   )
 }
