@@ -99,14 +99,23 @@ begin
       insert into auth.users (
         instance_id, id, aud, role, email, encrypted_password,
         email_confirmed_at, created_at, updated_at,
-        raw_app_meta_data, raw_user_meta_data, is_super_admin)
+        raw_app_meta_data, raw_user_meta_data, is_super_admin,
+        -- These MUST be '' and not NULL. GoTrue is written in Go and scans
+        -- them into non-nullable strings; a NULL raises "converting NULL to
+        -- string is unsupported" and the token endpoint returns a bare 500
+        -- with nothing in the browser to suggest the cause. The account looks
+        -- perfectly valid in SQL and simply cannot sign in.
+        confirmation_token, recovery_token, email_change_token_new,
+        email_change, email_change_token_current,
+        phone_change, phone_change_token, reauthentication_token)
       values (
         '00000000-0000-0000-0000-000000000000', v_user, 'authenticated', 'authenticated',
         v_email, crypt(v_password, gen_salt('bf')),
         now(), now(), now(),
         jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email')),
         jsonb_build_object('full_name', r.first_name || ' ' || r.last_name),
-        false);
+        false,
+        '', '', '', '', '', '', '', '');
 
       insert into auth.identities (
         id, provider_id, user_id, identity_data, provider,
@@ -174,13 +183,18 @@ begin
     insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data, is_super_admin)
+      raw_app_meta_data, raw_user_meta_data, is_super_admin,
+      -- Empty strings, never NULL — see the note on the staff insert above.
+      confirmation_token, recovery_token, email_change_token_new,
+      email_change, email_change_token_current,
+      phone_change, phone_change_token, reauthentication_token)
     values (
       '00000000-0000-0000-0000-000000000000', v_user, 'authenticated', 'authenticated',
       v_email, crypt(v_password, gen_salt('bf')),
       now(), now(), now(),
       jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email')),
-      '{}'::jsonb, false);
+      '{}'::jsonb, false,
+      '', '', '', '', '', '', '', '');
 
     insert into auth.identities (
       id, provider_id, user_id, identity_data, provider,
@@ -194,7 +208,35 @@ begin
     v_made := v_made + 1;
   end loop;
 
+  -- Belt and braces: repair any account that predates this fix, including ones
+  -- created by an earlier run of this very script.
+  update auth.users set
+    confirmation_token         = coalesce(confirmation_token, ''),
+    recovery_token             = coalesce(recovery_token, ''),
+    email_change_token_new     = coalesce(email_change_token_new, ''),
+    email_change               = coalesce(email_change, ''),
+    email_change_token_current = coalesce(email_change_token_current, ''),
+    phone_change               = coalesce(phone_change, ''),
+    phone_change_token         = coalesce(phone_change_token, ''),
+    reauthentication_token     = coalesce(reauthentication_token, '');
+
   raise notice 'Demo logins ready. % new account(s). Password: %', v_made, v_password;
+end $$;
+
+-- Refuse to report success while any account still cannot sign in. A NULL in
+-- one of these columns produces a 500 from /auth/v1/token with nothing in the
+-- browser or the SQL to explain it, so it is worth failing loudly here.
+do $$
+declare n int;
+begin
+  select count(*) into n from auth.users
+   where confirmation_token is null or recovery_token is null
+      or email_change_token_new is null or email_change is null
+      or email_change_token_current is null or phone_change is null
+      or phone_change_token is null or reauthentication_token is null;
+  if n > 0 then
+    raise exception '% account(s) have NULL auth token columns and will 500 on sign-in', n;
+  end if;
 end $$;
 
 -- What was created, and what each account will actually see.
