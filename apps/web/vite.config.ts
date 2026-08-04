@@ -7,12 +7,24 @@ import { fileURLToPath } from 'node:url'
 // new URL(...).pathname yields "/D:/..." and breaks path resolution.
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
+declare const process: { env: Record<string, string | undefined> }
+
+// GitHub Pages serves project repos from /<repo>/, so assets, the manifest and
+// the service worker all need that prefix. Set by the deploy workflow; stays
+// "/" for local dev and any root-hosted deployment.
+const base = process.env.VITE_BASE || '/'
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
+      // Without this the worker registers at origin root, which on
+      // <user>.github.io would put it in front of every other project site.
+      base,
+      scope: base,
       manifest: {
         name: 'EduMU',
         short_name: 'EduMU',
@@ -20,7 +32,8 @@ export default defineConfig({
         theme_color: '#0f4c5c',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/',
+        start_url: base,
+        scope: base,
       },
       workbox: {
         // Reference data is cached so the register opens on a dead connection.
