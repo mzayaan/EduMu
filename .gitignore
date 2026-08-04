@@ -30,5 +30,8 @@ coverage/
 *.bundle
 
 # CI removed — verification runs locally via `npm run verify`.
-.github/
+.github/*
+!.github/workflows/
+.github/workflows/*
+!.github/workflows/deploy.yml
 _pp.json  

@@ -1,0 +1,70 @@
+name: Deploy web app to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # apps/web/.env is gitignored; .env.example holds the project URL and the
+      # publishable key, both of which are public by design (RLS decides access).
+      # Repository secrets override them if set.
+      - name: Write apps/web/.env
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          cp apps/web/.env.example apps/web/.env
+          if [ -n "$SUPABASE_URL" ]; then
+            sed -i "s#^VITE_SUPABASE_URL=.*#VITE_SUPABASE_URL=$SUPABASE_URL#" apps/web/.env
+          fi
+          if [ -n "$SUPABASE_KEY" ]; then
+            sed -i "s#^VITE_SUPABASE_PUBLISHABLE_KEY=.*#VITE_SUPABASE_PUBLISHABLE_KEY=$SUPABASE_KEY#" apps/web/.env
+          fi
+          cut -d= -f1 apps/web/.env
+
+      - name: Build
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      # TanStack Router handles routing client-side; Pages serves 404.html for
+      # unknown paths, so pointing it at the app keeps deep links working.
+      - name: Add SPA fallback
+        run: cp apps/web/dist/index.html apps/web/dist/404.html
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
