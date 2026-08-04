@@ -60,14 +60,23 @@ export function Shell({ claims }: { claims: EduClaims }) {
     { id: 'rooms',         label: 'Rooms',         visible: claims.person_type === 'staff' },
     { id: 'yearend',       label: 'Year end',      visible: hasCap(claims, 'school.manage')
                                                           || hasCap(claims, 'marks.publish') },
-    { id: 'fees',          label: 'Fees',          visible: hasCap(claims, 'school.manage') },
+    // fees.manage exists so the Bursar can do their job without also being able
+    // to republish the timetable. Gating this on school.manage alone locked the
+    // one post whose entire job is fees out of the fees screen.
+    { id: 'fees',          label: 'Fees',          visible: hasCap(claims, 'fees.manage')
+                                                          || hasCap(claims, 'school.manage') },
     { id: 'outbox',        label: 'SMS outbox',    visible: hasCap(claims, 'person.read.all') },
   ]
   const available = tabs.filter((t) => t.visible)
   const [tab, setTab] = useState<Tab>(available[0]?.id ?? 'register')
 
-  // Guardians and pupils never see the staff shell.
-  if (claims.person_type === 'guardian') return <GuardianPortal claims={claims} />
+  // Guardians and pupils never see the staff shell. Pupils were falling through
+  // to it and hitting the "no permissions" empty state, because they hold no
+  // capabilities by design — their access is relationship-based and decided
+  // inside the RLS policies, not by a capability.
+  if (claims.person_type === 'guardian' || claims.person_type === 'student') {
+    return <GuardianPortal claims={claims} />
+  }
 
   if (available.length === 0) {
     return (

@@ -33,7 +33,11 @@ function DemoBanner() {
 }
 
 export function FeesScreen({ claims }: { claims: EduClaims }) {
-  const isOffice = hasCap(claims, 'school.manage')
+  // The Bursar holds fees.manage and not school.manage. Waiving is deliberately
+  // narrower — forgiving money owed stays with the office — so that is checked
+  // separately below rather than folded into one flag.
+  const isOffice = hasCap(claims, 'fees.manage') || hasCap(claims, 'school.manage')
+  const canWaive = hasCap(claims, 'school.manage')
   const [tab, setTab] = useState<'statement' | 'payments' | 'setup'>(
     isOffice ? 'payments' : 'statement',
   )
@@ -63,14 +67,18 @@ export function FeesScreen({ claims }: { claims: EduClaims }) {
         </div>
       )}
 
-      {tab === 'statement' && <Statement claims={claims} isOffice={isOffice} />}
+      {tab === 'statement' && (
+        <Statement claims={claims} isOffice={isOffice} canWaive={canWaive} />
+      )}
       {tab === 'payments' && isOffice && <Verification />}
       {tab === 'setup' && isOffice && <Setup claims={claims} />}
     </div>
   )
 }
 
-function Statement({ claims, isOffice }: { claims: EduClaims; isOffice: boolean }) {
+function Statement({ claims, isOffice, canWaive }: {
+  claims: EduClaims; isOffice: boolean; canWaive: boolean
+}) {
   const qc = useQueryClient()
   const [err, setErr] = useState<string | null>(null)
   const [paying, setPaying] = useState<StatementRow | null>(null)
@@ -149,7 +157,7 @@ function Statement({ claims, isOffice }: { claims: EduClaims; isOffice: boolean 
                       Record payment
                     </button>
                   )}
-                  {isOffice && !r.waived && Number(r.balance) > 0 && (
+                  {canWaive && !r.waived && Number(r.balance) > 0 && (
                     <WaiveButton onWaive={(reason) => waive.mutate({ id: r.charge_id, reason })} />
                   )}
                 </td>

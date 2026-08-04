@@ -11,7 +11,12 @@ export function GuardianPortal({ claims }: { claims: EduClaims }) {
   const [wardId, setWardId] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>('attendance')
 
-  const wards = useQuery({ queryKey: ['wards'], queryFn: api.fetchWards })
+  // A pupil viewing their own record is the same screen with one "ward".
+  const selfId = claims.person_type === 'student' ? claims.person_id ?? null : null
+  const wards = useQuery({
+    queryKey: ['wards', selfId],
+    queryFn: () => api.fetchWards(selfId),
+  })
   useEffect(() => {
     if (!wardId && wards.data?.length) setWardId(wards.data[0]!.student_id)
   }, [wards.data, wardId])

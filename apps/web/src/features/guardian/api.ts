@@ -10,13 +10,27 @@ export interface Ward {
   is_responsible_party: boolean
 }
 
-export async function fetchWards(): Promise<Ward[]> {
+/**
+ * The pupils this portal should show.
+ *
+ * For a guardian that is their children, and RLS on student_guardian already
+ * limits the read to them.
+ *
+ * `selfStudentId` covers a pupil signing in for themselves. Pupils hold no
+ * capabilities at all — their access is relationship-based, decided inside the
+ * policies by `student_id = app.person_id()` — so before this they landed in the
+ * staff shell with nothing and saw an error telling them their account had no
+ * permissions. They are not a guardian of themselves, so student_guardian
+ * returns nothing for them and the id has to come from the caller.
+ */
+export async function fetchWards(selfStudentId?: string | null): Promise<Ward[]> {
   // RLS on student_guardian limits this to the caller's own children.
   const { data, error } = await supabase
     .from('student_guardian')
     .select('student_id, is_responsible_party')
   if (error) throw error
   const ids = (data ?? []).map((r: any) => r.student_id)
+  if (selfStudentId && !ids.includes(selfStudentId)) ids.push(selfStudentId)
   if (ids.length === 0) return []
 
   const { data: roster, error: e2 } = await supabase
